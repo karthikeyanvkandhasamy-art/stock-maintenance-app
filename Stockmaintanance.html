@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Maintenance System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; }
+    header { background: #111827; color: #fff; padding: 15px; text-align: center; }
+    section { background: #fff; margin: 15px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+    h2 { margin-top: 0; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select, button { width: 100%; padding: 8px; margin-top: 5px; }
+    button { background: #2563eb; color: #fff; border: none; border-radius: 5px; cursor: pointer; margin-top: 12px; }
+    button:hover { background: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #e5e7eb; }
+    .info { background: #f1f5f9; padding: 8px; border-radius: 5px; margin-top: 10px; }
+    @media (min-width: 768px) {
+      .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Stock Maintenance System</h1>
+</header>
+
+<!-- PURCHASE SECTION -->
+<section>
+  <h2>Purchase</h2>
+  <label>Item</label>
+  <select id="purchaseItem"></select>
+  <div class="info">Available Stock: <span id="purchaseStock">0</span></div>
+
+  <label>Quantity</label>
+  <input type="number" id="purchaseQty" />
+
+  <label>Purchase Price</label>
+  <input type="number" id="purchasePrice" />
+
+  <label>Supplier Company</label>
+  <input type="text" id="purchaseCompany" />
+
+  <button onclick="addPurchase()">Add Purchase</button>
+</section>
+
+<!-- SALES SECTION -->
+<section>
+  <h2>Sales</h2>
+  <label>Item</label>
+  <select id="salesItem"></select>
+  <div class="info">Available Stock: <span id="salesStock">0</span></div>
+
+  <label>Quantity</label>
+  <input type="number" id="salesQty" />
+
+  <label>Sales Price</label>
+  <input type="number" id="salesPrice" />
+
+  <label>Customer / Company</label>
+  <input type="text" id="salesCompany" />
+
+  <button onclick="addSale()">Add Sale</button>
+</section>
+
+<!-- STOCK LIST SECTION -->
+<section>
+  <h2>Stock List</h2>
+  <label>New Item Name</label>
+  <input type="text" id="newItem" />
+  <button onclick="addItem()">Add Item</button>
+
+  <table>
+    <thead>
+      <tr><th>Item</th><th>Quantity</th></tr>
+    </thead>
+    <tbody id="stockTable"></tbody>
+  </table>
+</section>
+
+<!-- PROFIT & LOSS -->
+<section>
+  <h2>Profit & Loss</h2>
+  <p>Total Purchase: ₹ <span id="totalPurchase">0</span></p>
+  <p>Total Sales: ₹ <span id="totalSales">0</span></p>
+  <p><strong>Net P/L: ₹ <span id="netPL">0</span></strong></p>
+  <p>Stock Value: ₹ <span id="stockValue">0</span></p>
+</section>
+
+<script>
+/* =====================================================
+   GOOGLE SHEETS BACKEND (Apps Script)
+   -----------------------------------------------------
+   Create a Google Sheet with these sheets:
+
+   1) Items
+      Columns: Item | Quantity | AvgPrice
+
+   2) Transactions
+      Columns: Date | Type | Item | Qty | Price | Company
+
+   3) Summary (optional for P&L calculations)
+
+   Apps Script must expose Web App endpoints:
+   - ?action=getItems
+   - ?action=addItem
+   - ?action=purchase
+   - ?action=sale
+   - ?action=getSummary
+
+   Paste Apps Script separately (I can provide full script).
+   ===================================================== */
+
+const API_URL= "https://script.google.com/macros/s/AKfycbzwztJua8kDT7SBbgHJU2OWO3OOPLNcNvuLJzLDEr_sKA8GtphqDMaUUe-Yrssdh2nIug/exec";
+console.log(API_URL);
+async function loadItems() {
+  const res = await fetch(`${API_URL}?action=getItems`);
+  const data = await res.json();
+
+  const p = document.getElementById('purchaseItem');
+  const s = document.getElementById('salesItem');
+  const table = document.getElementById('stockTable');
+  p.innerHTML = s.innerHTML = table.innerHTML = '';
+
+  data.forEach(r => {
+    p.innerHTML += `<option value="${r.item}">${r.item}</option>`;
+    s.innerHTML += `<option value="${r.item}">${r.item}</option>`;
+    table.innerHTML += `<tr><td>${r.item}</td><td>${r.qty}</td></tr>`;
+  });
+}
+
+async function addItem() {
+  const item = document.getElementById('newItem').value;
+  if (!item) return;
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action:'addItem', item })});
+  document.getElementById('newItem').value = '';
+  loadItems();
+}
+
+async function addPurchase() {
+  const payload = {
+    action: 'purchase',
+    item: purchaseItem.value,
+    qty: purchaseQty.value,
+    price: purchasePrice.value,
+    company: purchaseCompany.value
+  };
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  loadItems();
+}
+
+async function addSale() {
+  const payload = {
+    action: 'sale',
+    item: salesItem.value,
+    qty: salesQty.value,
+    price: salesPrice.value,
+    company: salesCompany.value
+  };
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+  loadItems();
+}
+
+loadItems();
+</script>
+
+</body>
+</html>
